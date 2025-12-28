@@ -659,6 +659,241 @@ function renderChart(chartData) {
     });
 }
 
+// Pump Recommendation Functions
+function calculatePumpSchedule(coveragePercentage) {
+    return new Promise(async (resolve) => {
+        const readings = await getAllReadings();
+        
+        if (readings.length < 10) {
+            alert('Nicht genügend Daten. Bitte sammle mindestens 2 Wochen Daten.');
+            resolve(null);
+            return;
+        }
+        
+        // Sort readings by timestamp
+        readings.sort((a, b) => a.timestamp - b.timestamp);
+        
+        // Calculate hourly usage for each day of week
+        const weekdayHourlyUsage = new Array(7).fill(0).map(() => new Array(24).fill(0));
+        const weekdayHourlyCounts = new Array(7).fill(0).map(() => new Array(24).fill(0));
+        
+        for (let i = 0; i < readings.length - 1; i++) {
+            const current = readings[i];
+            const next = readings[i + 1];
+            const usage = next.value - current.value;
+            
+            if (usage > 0) {
+                const date = new Date(next.timestamp);
+                const dayOfWeek = date.getDay();
+                const hour = date.getHours();
+                
+                weekdayHourlyUsage[dayOfWeek][hour] += usage;
+                weekdayHourlyCounts[dayOfWeek][hour]++;
+            }
+        }
+        
+        // Calculate averages
+        for (let day = 0; day < 7; day++) {
+            for (let hour = 0; hour < 24; hour++) {
+                if (weekdayHourlyCounts[day][hour] > 0) {
+                    weekdayHourlyUsage[day][hour] /= weekdayHourlyCounts[day][hour];
+                }
+            }
+        }
+        
+        // Determine threshold based on coverage percentage
+        const allUsageValues = [];
+        for (let day = 0; day < 7; day++) {
+            for (let hour = 0; hour < 24; hour++) {
+                if (weekdayHourlyUsage[day][hour] > 0) {
+                    allUsageValues.push(weekdayHourlyUsage[day][hour]);
+                }
+            }
+        }
+        
+        allUsageValues.sort((a, b) => b - a);
+        
+        // Calculate threshold to cover X% of usage
+        const targetCoverage = coveragePercentage / 100;
+        const totalUsage = allUsageValues.reduce((sum, val) => sum + val, 0);
+        let cumulativeUsage = 0;
+        let threshold = 0;
+        
+        for (const usage of allUsageValues) {
+            cumulativeUsage += usage;
+            if (cumulativeUsage >= totalUsage * targetCoverage) {
+                threshold = usage;
+                break;
+            }
+        }
+        
+        // Generate schedule
+        const schedule = [];
+        const dayNames = ['Sonntag', 'Montag', 'Dienstag', 'Mittwoch', 'Donnerstag', 'Freitag', 'Samstag'];
+        
+        let totalActiveHours = 0;
+        let coveredUsage = 0;
+        
+        for (let day = 0; day < 7; day++) {
+            const daySchedule = {
+                dayName: dayNames[day],
+                timeSlots: []
+            };
+            
+            let rangeStart = null;
+            
+            for (let hour = 0; hour < 24; hour++) {
+                const shouldRun = weekdayHourlyUsage[day][hour] >= threshold;
+                
+                if (shouldRun) {
+                    totalActiveHours++;
+                    coveredUsage += weekdayHourlyUsage[day][hour];
+                    
+                    if (rangeStart === null) {
+                        rangeStart = hour;
+                    }
+                } else {
+                    if (rangeStart !== null) {
+                        daySchedule.timeSlots.push({
+                            start: rangeStart,
+                            end: hour
+                        });
+                        rangeStart = null;
+                    }
+                }
+            }
+            
+            // Close any open range at end of day
+            if (rangeStart !== null) {
+                daySchedule.timeSlots.push({
+                    start: rangeStart,
+                    end: 24
+                });
+            }
+            
+            if (daySchedule.timeSlots.length > 0) {
+                schedule.push(daySchedule);
+            }
+        }
+        
+        const coverageAchieved = (coveredUsage / totalUsage) * 100;
+        const energySavings = ((24 * 7 - totalActiveHours) / (24 * 7)) * 100;
+        
+        resolve({
+            schedule,
+            stats: {
+                activeHoursPerDay: (totalActiveHours / 7).toFixed(1),
+                coverageAchieved: coverageAchieved.toFixed(1),
+                energySavings: energySavings.toFixed(1)
+            }
+        });
+    });
+}
+
+function displayPumpSchedule(data) {
+    const container = document.getElementById('pump-schedule');
+    container.innerHTML = '';
+    
+    data.schedule.forEach(day => {
+        const dayDiv = document.createElement('div');
+        dayDiv.className = 'day-schedule';
+        
+        const timeSlotsHtml = day.timeSlots.map(slot => {
+            const startTime = `${slot.start.toString().padStart(2, '0')}:00`;
+            const endTime = slot.end === 24 ? '24:00' : `${slot.end.toString().padStart(2, '0')}:00`;
+            return `<span class="time-slot">${startTime} - ${endTime}</span>`;
+        }).join('');
+        
+        dayDiv.innerHTML = `
+            <div class="day-name">${day.dayName}</div>
+            <div class="time-slots">${timeSlotsHtml}</div>
+        `;
+        
+        container.appendChild(dayDiv);
+    });
+    
+    document.getElementById('active-hours').textContent = `${data.stats.activeHoursPerDay} Std.`;
+    document.getElementById('covered-usage').textContent = `${data.stats.coverageAchieved}%`;
+    document.getElementById('energy-savings').textContent = `${data.stats.energySavings}%`;
+    
+    document.getElementById('pump-recommendation').style.display = 'block';
+}
+
+async function handleCalculatePump() {
+    const coveragePercentage = parseInt(document.getElementById('coverage-percentage').value);
+    const data = await calculatePumpSchedule(coveragePercentage);
+    
+    if (data) {
+        displayPumpSchedule(data);
+    }
+}
+
+function exportPumpScheduleAsText() {
+    const schedule = document.getElementById('pump-schedule').innerText;
+    const stats = `
+Aktive Stunden/Tag: ${document.getElementById('active-hours').textContent}
+Abgedeckter Verbrauch: ${document.getElementById('covered-usage').textContent}
+Energieeinsparung: ${document.getElementById('energy-savings').textContent}
+`;
+    
+    const text = `ZIRKULATIONSPUMPEN-PROGRAMMIERUNG\n${'='.repeat(50)}\n\n${schedule}\n\nSTATISTIK\n${'-'.repeat(50)}\n${stats}`;
+    
+    const blob = new Blob([text], { type: 'text/plain' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'pumpen-zeitplan.txt';
+    a.click();
+    URL.revokeObjectURL(url);
+}
+
+function exportPumpScheduleAsICal() {
+    const scheduleData = [];
+    document.querySelectorAll('.day-schedule').forEach((dayDiv, dayIndex) => {
+        const dayName = dayDiv.querySelector('.day-name').textContent;
+        const timeSlots = dayDiv.querySelectorAll('.time-slot');
+        
+        timeSlots.forEach(slot => {
+            const timeRange = slot.textContent.trim();
+            scheduleData.push({ day: dayIndex, dayName, timeRange });
+        });
+    });
+    
+    let ical = `BEGIN:VCALENDAR
+VERSION:2.0
+PRODID:-//Wasserzähler Tracker//Pumpen-Zeitplan//DE
+CALSCALE:GREGORIAN
+METHOD:PUBLISH
+X-WR-CALNAME:Zirkulationspumpe
+X-WR-TIMEZONE:Europe/Berlin
+
+`;
+    
+    scheduleData.forEach((entry, index) => {
+        const [startTime, endTime] = entry.timeRange.split(' - ');
+        ical += `BEGIN:VEVENT
+UID:pump-${index}@watermeter-tracker
+SUMMARY:Zirkulationspumpe AN
+DESCRIPTION:Automatisch generiert basierend auf Verbrauchsdaten
+DTSTART:${startTime.replace(':', '')}00
+DTEND:${endTime.replace(':', '')}00
+RRULE:FREQ=WEEKLY;BYDAY=${['SU','MO','TU','WE','TH','FR','SA'][entry.day]}
+END:VEVENT
+
+`;
+    });
+    
+    ical += 'END:VCALENDAR';
+    
+    const blob = new Blob([ical], { type: 'text/calendar' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'pumpen-zeitplan.ics';
+    a.click();
+    URL.revokeObjectURL(url);
+}
+
 // Navigation
 function setupNavigation() {
     const navButtons = document.querySelectorAll('.nav-btn');
@@ -678,7 +913,7 @@ function setupNavigation() {
             } else if (targetSection === 'chart') {
                 sectionIndex = 2;
             } else if (targetSection === 'history') {
-                sectionIndex = 3;
+                sectionIndex = 4;
             } else if (targetSection === 'settings') {
                 sectionIndex = 1;
             }
@@ -751,6 +986,16 @@ async function initApp() {
         
         // Event Listeners - Chart
         document.getElementById('chart-type').addEventListener('change', updateChart);
+        
+        // Event Listeners - Pump Recommendation
+        document.getElementById('coverage-percentage').addEventListener('input', (e) => {
+            const value = e.target.value;
+            document.getElementById('coverage-value').textContent = `${value}%`;
+            document.getElementById('coverage-text').textContent = `${value}%`;
+        });
+        document.getElementById('calculate-pump-btn').addEventListener('click', handleCalculatePump);
+        document.getElementById('export-text-btn').addEventListener('click', exportPumpScheduleAsText);
+        document.getElementById('export-ical-btn').addEventListener('click', exportPumpScheduleAsICal);
         
         setupNavigation();
         
