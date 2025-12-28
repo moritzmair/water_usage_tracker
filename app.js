@@ -182,8 +182,12 @@ async function startAutoCapture() {
     // Show battery warning
     checkBatteryStatus();
     
-    // Start capture loop
-    scheduleNextCapture();
+    // Perform first capture immediately (after 1 second for camera to initialize)
+    setTimeout(async () => {
+        await performAutoCapture();
+        // Then start regular interval-based capture loop
+        scheduleNextCapture();
+    }, 1000);
     
     console.log(`Auto-capture started with ${intervalMinutes} minute interval`);
 }
@@ -312,18 +316,62 @@ async function performAutoCapture() {
 
 // OCR Function
 async function performOCR(imageData) {
-    const worker = await Tesseract.createWorker('deu', 1, {
-        logger: m => {
-            if (m.status === 'recognizing text') {
-                console.log(`OCR Progress: ${Math.round(m.progress * 100)}%`);
-            }
+    // Check API configuration
+    const apiKey = getApiKey();
+    if (!apiKey) {
+        throw new Error('Kein OpenRouter API Key konfiguriert. Bitte in den Einstellungen eingeben.');
+    }
+
+    try {
+        // Convert data URL to base64
+        const base64Image = imageData.split(',')[1];
+
+        // Call OpenRouter API
+        const response = await fetch(API_CONFIG.endpoint, {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${apiKey}`,
+                'Content-Type': 'application/json',
+                'HTTP-Referer': window.location.origin,
+                'X-Title': 'Wasserzähler Auto-Capture'
+            },
+            body: JSON.stringify({
+                model: getModel(),
+                messages: [
+                    {
+                        role: 'user',
+                        content: [
+                            {
+                                type: 'text',
+                                text: API_CONFIG.systemPrompt
+                            },
+                            {
+                                type: 'image_url',
+                                image_url: {
+                                    url: `data:image/png;base64,${base64Image}`
+                                }
+                            }
+                        ]
+                    }
+                ],
+                max_tokens: 100,
+                temperature: 0.1
+            })
+        });
+
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}));
+            throw new Error(`API Fehler: ${response.status} - ${errorData.error?.message || response.statusText}`);
         }
-    });
-    
-    const { data: { text } } = await worker.recognize(imageData);
-    await worker.terminate();
-    
-    return text;
+
+        const data = await response.json();
+        const aiResponse = data.choices[0]?.message?.content || '';
+        
+        return aiResponse;
+    } catch (error) {
+        console.error('OpenRouter API Error:', error);
+        throw error;
+    }
 }
 
 // Extract meter reading from OCR text
@@ -968,6 +1016,7 @@ async function initApp() {
         await initDB();
         await registerServiceWorker();
         loadSettings();
+        loadApiConfig();
         
         // Event Listeners - Auto-Capture
         document.getElementById('start-auto-btn').addEventListener('click', startAutoCapture);
@@ -983,6 +1032,9 @@ async function initApp() {
         document.getElementById('keep-screen-on').addEventListener('change', saveSettings);
         document.getElementById('sound-enabled').addEventListener('change', saveSettings);
         document.getElementById('flash-indicator').addEventListener('change', saveSettings);
+        
+        // Event Listeners - API Configuration
+        document.getElementById('save-api-config-btn').addEventListener('click', handleSaveApiConfig);
         
         // Event Listeners - Chart
         document.getElementById('chart-type').addEventListener('change', updateChart);
@@ -1006,6 +1058,36 @@ async function initApp() {
         console.log('App initialized successfully');
     } catch (error) {
         console.error('App initialization error:', error);
+    }
+}
+
+// API Configuration Handler
+function handleSaveApiConfig() {
+    const apiKey = document.getElementById('api-key-input').value.trim();
+    const model = document.getElementById('model-select').value;
+    
+    if (!apiKey) {
+        alert('Bitte gib einen gültigen API Key ein.');
+        return;
+    }
+    
+    setApiKey(apiKey);
+    setModel(model);
+    alert('API-Konfiguration gespeichert! ✅');
+}
+
+// Load API config on startup
+function loadApiConfig() {
+    const savedKey = getApiKey();
+    const savedModel = getModel();
+    
+    if (savedKey) {
+        const apiKeyInput = document.getElementById('api-key-input');
+        if (apiKeyInput) apiKeyInput.value = savedKey;
+    }
+    if (savedModel) {
+        const modelSelect = document.getElementById('model-select');
+        if (modelSelect) modelSelect.value = savedModel;
     }
 }
 

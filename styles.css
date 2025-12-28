@@ -347,6 +347,57 @@ body {
     display: flex;
     flex-direction: column;
     gap: 15px;
+    margin-bottom: 20px;
+}
+
+.settings-group h3 {
+    font-size: 1.1rem;
+    margin-bottom: 10px;
+    color: var(--text-color);
+}
+
+/* API Configuration */
+.api-config {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+}
+
+.input-group {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.input-group label {
+    font-size: 0.95rem;
+    font-weight: 500;
+    color: var(--text-color);
+}
+
+.input-group input[type="password"],
+.input-group input[type="text"],
+.input-group select {
+    width: 100%;
+    padding: 12px;
+    font-size: 1rem;
+    border: 2px solid var(--primary-color);
+    border-radius: var(--border-radius);
+    background: white;
+}
+
+.input-group small {
+    font-size: 0.85rem;
+    color: #666;
+}
+
+.input-group small a {
+    color: var(--primary-color);
+    text-decoration: none;
+}
+
+.input-group small a:hover {
+    text-decoration: underline;
 }
 
 .setting-item {

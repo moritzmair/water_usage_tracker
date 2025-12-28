@@ -4,11 +4,11 @@ const ASSETS_TO_CACHE = [
     '/index.html',
     '/styles.css',
     '/app.js',
+    '/config.js',
     '/manifest.json',
     '/icon-192.png',
     '/icon-512.png',
-    'https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js',
-    'https://cdn.jsdelivr.net/npm/tesseract.js@5.0.2/dist/tesseract.min.js'
+    'https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js'
 ];
 
 // Install Event - Cache Assets
