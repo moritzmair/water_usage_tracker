@@ -20,8 +20,8 @@ const API_CONFIG = {
     // System Prompt für Wasserzähler-Erkennung
     systemPrompt: `Du bist ein Experte für die Erkennung von Wasserzählerständen. 
 Analysiere das Bild und extrahiere den Zählerstand.
-Der Zählerstand besteht typischerweise aus 5 schwarzen Ziffern (Kubikmeter) und 3 roten Ziffern (Liter).
-Gib NUR die Zahl zurück im Format: XXXXX.XXX (z.B. 123.456)
+Der Zählerstand besteht typischerweise aus schwarzen Ziffern auf dem LCD Display. 
+Gib NUR die Zahl zurück im Format: XXXXX.XXX (z.B. 123.456).
 Wenn du den Zählerstand nicht eindeutig erkennen kannst, antworte mit "FEHLER: [Beschreibung]".`
 };
 
