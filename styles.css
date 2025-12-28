@@ -1,0 +1,559 @@
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+:root {
+    --primary-color: #2196F3;
+    --secondary-color: #1976D2;
+    --success-color: #4CAF50;
+    --danger-color: #f44336;
+    --text-color: #333;
+    --bg-color: #f5f5f5;
+    --card-bg: #ffffff;
+    --border-radius: 12px;
+    --shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    --nav-height: 70px;
+}
+
+body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+    background-color: var(--bg-color);
+    color: var(--text-color);
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+    overflow-x: hidden;
+}
+
+.app-container {
+    max-width: 600px;
+    margin: 0 auto;
+    min-height: 100vh;
+    background-color: var(--card-bg);
+    position: relative;
+    padding-bottom: var(--nav-height);
+}
+
+/* Header */
+.app-header {
+    background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+    color: white;
+    padding: 20px;
+    text-align: center;
+    box-shadow: var(--shadow);
+    position: sticky;
+    top: 0;
+    z-index: 100;
+}
+
+.app-header h1 {
+    font-size: 1.5rem;
+    font-weight: 600;
+}
+
+/* Main Content */
+.main-content {
+    padding: 20px;
+}
+
+.section {
+    margin-bottom: 30px;
+    background: var(--card-bg);
+    border-radius: var(--border-radius);
+    padding: 20px;
+    box-shadow: var(--shadow);
+}
+
+.section h2 {
+    font-size: 1.3rem;
+    margin-bottom: 15px;
+    color: var(--primary-color);
+}
+
+/* Camera Section */
+.camera-container {
+    position: relative;
+    width: 100%;
+    background: #000;
+    border-radius: var(--border-radius);
+    overflow: hidden;
+    margin-bottom: 15px;
+}
+
+#camera-preview {
+    width: 100%;
+    height: auto;
+    display: block;
+    max-height: 400px;
+    object-fit: cover;
+}
+
+.camera-controls {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+/* Buttons */
+.btn {
+    flex: 1;
+    min-width: 120px;
+    padding: 12px 20px;
+    border: none;
+    border-radius: var(--border-radius);
+    font-size: 1rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.btn:active {
+    transform: scale(0.98);
+}
+
+.btn-primary {
+    background-color: var(--primary-color);
+    color: white;
+}
+
+.btn-primary:hover {
+    background-color: var(--secondary-color);
+}
+
+.btn-success {
+    background-color: var(--success-color);
+    color: white;
+}
+
+.btn-success:hover {
+    background-color: #45a049;
+}
+
+.btn-secondary {
+    background-color: #757575;
+    color: white;
+}
+
+.btn-secondary:hover {
+    background-color: #616161;
+}
+
+/* OCR Result */
+.ocr-result {
+    margin-top: 20px;
+    padding: 15px;
+    background: #f0f8ff;
+    border-radius: var(--border-radius);
+    border: 2px solid var(--primary-color);
+}
+
+.ocr-result h3 {
+    font-size: 1rem;
+    margin-bottom: 10px;
+    color: var(--primary-color);
+}
+
+.reading-input {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 15px;
+}
+
+.reading-input input {
+    flex: 1;
+    padding: 12px;
+    font-size: 1.5rem;
+    border: 2px solid var(--primary-color);
+    border-radius: var(--border-radius);
+    text-align: center;
+    font-weight: bold;
+}
+
+.reading-input .unit {
+    font-size: 1.2rem;
+    font-weight: 600;
+    color: var(--primary-color);
+}
+
+/* Manual Entry */
+.manual-entry {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+/* Chart Controls */
+.chart-controls {
+    margin-bottom: 15px;
+}
+
+.chart-controls select {
+    width: 100%;
+    padding: 12px;
+    font-size: 1rem;
+    border: 2px solid var(--primary-color);
+    border-radius: var(--border-radius);
+    background: white;
+    cursor: pointer;
+}
+
+.chart-container {
+    position: relative;
+    height: 300px;
+    width: 100%;
+}
+
+/* Status Display */
+.status-display {
+    background: linear-gradient(135deg, #f5f5f5, #e8f5e9);
+    border-radius: var(--border-radius);
+    padding: 15px;
+    margin-bottom: 20px;
+}
+
+.status-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 0;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+}
+
+.status-item:last-child {
+    border-bottom: none;
+}
+
+.status-label {
+    font-size: 0.9rem;
+    color: #666;
+}
+
+.status-value {
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: var(--primary-color);
+}
+
+.status-active {
+    color: var(--success-color);
+    animation: pulse 2s ease-in-out infinite;
+}
+
+.status-inactive {
+    color: #999;
+}
+
+@keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.6; }
+}
+
+/* Auto-Capture Controls */
+.auto-controls {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+    margin-top: 20px;
+}
+
+.interval-selector {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.interval-selector label {
+    font-size: 0.95rem;
+    font-weight: 500;
+    color: var(--text-color);
+}
+
+.interval-selector select {
+    width: 100%;
+    padding: 12px;
+    font-size: 1rem;
+    border: 2px solid var(--primary-color);
+    border-radius: var(--border-radius);
+    background: white;
+    cursor: pointer;
+}
+
+.btn-large {
+    padding: 16px 24px;
+    font-size: 1.1rem;
+    font-weight: 600;
+}
+
+.btn-danger {
+    background-color: var(--danger-color);
+    color: white;
+}
+
+.btn-danger:hover {
+    background-color: #d32f2f;
+}
+
+/* Capture Indicator */
+.capture-indicator {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    background-color: transparent;
+    transition: all 0.3s ease;
+}
+
+.capture-indicator.recording {
+    background-color: #f44336;
+    box-shadow: 0 0 20px rgba(244, 67, 54, 0.8);
+    animation: blink 1s ease-in-out infinite;
+}
+
+@keyframes blink {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.3; }
+}
+
+.capture-indicator.capturing {
+    background-color: #4CAF50;
+    animation: flash 0.5s ease-out;
+}
+
+@keyframes flash {
+    0% { transform: scale(1); opacity: 1; }
+    50% { transform: scale(3); opacity: 0.8; }
+    100% { transform: scale(1); opacity: 0; }
+}
+
+/* Warning Box */
+.warning-box {
+    background: #fff3cd;
+    border: 2px solid #ffc107;
+    border-radius: var(--border-radius);
+    padding: 12px;
+    margin-top: 15px;
+    font-size: 0.95rem;
+    color: #856404;
+    text-align: center;
+}
+
+/* Settings */
+.settings-group {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+}
+
+.setting-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 12px;
+    background: #f9f9f9;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: background 0.2s ease;
+}
+
+.setting-item:hover {
+    background: #f0f0f0;
+}
+
+.setting-item input[type="checkbox"] {
+    width: 20px;
+    height: 20px;
+    cursor: pointer;
+}
+
+.setting-item span {
+    flex: 1;
+    font-size: 0.95rem;
+}
+
+.settings-info {
+    margin-top: 15px;
+    padding: 15px;
+    background: #e3f2fd;
+    border-radius: var(--border-radius);
+    border-left: 4px solid var(--primary-color);
+}
+
+.settings-info p {
+    margin: 0;
+    font-size: 0.9rem;
+    line-height: 1.6;
+}
+
+/* Readings List */
+.readings-list {
+    max-height: 400px;
+    overflow-y: auto;
+}
+
+.reading-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px;
+    margin-bottom: 8px;
+    background: #f9f9f9;
+    border-radius: 8px;
+    border-left: 4px solid var(--primary-color);
+}
+
+.reading-item .reading-info {
+    flex: 1;
+}
+
+.reading-item .reading-value {
+    font-size: 1.2rem;
+    font-weight: 600;
+    color: var(--primary-color);
+}
+
+.reading-item .reading-time {
+    font-size: 0.85rem;
+    color: #666;
+}
+
+.reading-item .reading-usage {
+    font-size: 0.9rem;
+    color: var(--success-color);
+    font-weight: 500;
+}
+
+.reading-item .delete-btn {
+    background: var(--danger-color);
+    color: white;
+    border: none;
+    padding: 6px 12px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 0.9rem;
+}
+
+/* Bottom Navigation */
+.bottom-nav {
+    position: fixed;
+    bottom: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 100%;
+    max-width: 600px;
+    height: var(--nav-height);
+    background: white;
+    display: flex;
+    justify-content: space-around;
+    box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.1);
+    z-index: 1000;
+}
+
+.nav-btn {
+    flex: 1;
+    border: none;
+    background: transparent;
+    font-size: 0.75rem;
+    color: #757575;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    padding: 10px;
+}
+
+.nav-btn:active {
+    transform: scale(0.95);
+}
+
+.nav-btn.active {
+    color: var(--primary-color);
+    font-weight: 600;
+}
+
+/* Loading Overlay */
+.loading-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.8);
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    z-index: 9999;
+}
+
+.loading-spinner {
+    border: 4px solid rgba(255, 255, 255, 0.3);
+    border-top: 4px solid white;
+    border-radius: 50%;
+    width: 50px;
+    height: 50px;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+.loading-overlay p {
+    color: white;
+    margin-top: 20px;
+    font-size: 1.1rem;
+}
+
+/* Responsive Design */
+@media (max-width: 480px) {
+    .app-header h1 {
+        font-size: 1.2rem;
+    }
+    
+    .section {
+        padding: 15px;
+    }
+    
+    .section h2 {
+        font-size: 1.1rem;
+    }
+    
+    .btn {
+        min-width: 100px;
+        padding: 10px 15px;
+        font-size: 0.9rem;
+    }
+}
+
+/* PWA Install Prompt */
+.install-prompt {
+    position: fixed;
+    bottom: calc(var(--nav-height) + 10px);
+    left: 50%;
+    transform: translateX(-50%);
+    width: calc(100% - 40px);
+    max-width: 560px;
+    background: var(--primary-color);
+    color: white;
+    padding: 15px;
+    border-radius: var(--border-radius);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    z-index: 999;
+}
+
+.install-prompt button {
+    background: white;
+    color: var(--primary-color);
+    border: none;
+    padding: 8px 16px;
+    border-radius: 6px;
+    font-weight: 600;
+    cursor: pointer;
+}

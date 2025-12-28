@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="theme-color" content="#2196F3">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <title>Wasserzähler Tracker</title>
+    <link rel="manifest" href="manifest.json">
+    <link rel="stylesheet" href="styles.css">
+    <link rel="icon" type="image/png" href="icon-192.png">
+</head>
+<body>
+    <div class="app-container">
+        <!-- Header -->
+        <header class="app-header">
+            <h1>💧 Wasserzähler Tracker</h1>
+        </header>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <!-- Auto-Capture Section -->
+            <section id="auto-capture-section" class="section active">
+                <h2>Automatische Erfassung</h2>
+                
+                <!-- Status Display -->
+                <div class="status-display">
+                    <div class="status-item">
+                        <span class="status-label">Status:</span>
+                        <span id="auto-status" class="status-value status-inactive">Inaktiv</span>
+                    </div>
+                    <div class="status-item">
+                        <span class="status-label">Letzter Zählerstand:</span>
+                        <span id="last-reading" class="status-value">---</span>
+                    </div>
+                    <div class="status-item">
+                        <span class="status-label">Nächste Erfassung:</span>
+                        <span id="next-capture" class="status-value">---</span>
+                    </div>
+                    <div class="status-item">
+                        <span class="status-label">Erfolgreich:</span>
+                        <span id="success-count" class="status-value">0</span>
+                    </div>
+                </div>
+
+                <!-- Camera Preview -->
+                <div class="camera-container">
+                    <video id="camera-preview" autoplay playsinline muted></video>
+                    <canvas id="camera-canvas" style="display: none;"></canvas>
+                    <div id="capture-indicator" class="capture-indicator"></div>
+                </div>
+
+                <!-- Auto-Capture Controls -->
+                <div class="auto-controls">
+                    <div class="interval-selector">
+                        <label for="capture-interval">Erfassungsintervall:</label>
+                        <select id="capture-interval">
+                            <option value="5">5 Minuten (Test)</option>
+                            <option value="15">15 Minuten</option>
+                            <option value="30">30 Minuten</option>
+                            <option value="60" selected>1 Stunde</option>
+                            <option value="120">2 Stunden</option>
+                            <option value="360">6 Stunden</option>
+                        </select>
+                    </div>
+                    
+                    <button id="start-auto-btn" class="btn btn-primary btn-large">
+                        🔄 Automatik starten
+                    </button>
+                    <button id="stop-auto-btn" class="btn btn-danger btn-large" style="display: none;">
+                        ⏹ Automatik stoppen
+                    </button>
+                </div>
+
+                <!-- Battery Warning -->
+                <div id="battery-warning" class="warning-box" style="display: none;">
+                    ⚠️ Smartphone an Netzteil anschließen für Dauerbetrieb!
+                </div>
+            </section>
+
+            <!-- Manual Entry Section -->
+            <section class="section">
+                <h2>Manuelle Eingabe</h2>
+                <div class="manual-entry">
+                    <div class="reading-input">
+                        <input type="number" id="manual-reading" step="0.001" placeholder="Zählerstand eingeben">
+                        <span class="unit">m³</span>
+                    </div>
+                    <button id="save-manual-btn" class="btn btn-primary">💾 Speichern</button>
+                </div>
+            </section>
+
+            <!-- Settings Section -->
+            <section class="section">
+                <h2>Einstellungen</h2>
+                <div class="settings-group">
+                    <label class="setting-item">
+                        <input type="checkbox" id="keep-screen-on" checked>
+                        <span>Display immer eingeschaltet lassen (Wake Lock)</span>
+                    </label>
+                    <label class="setting-item">
+                        <input type="checkbox" id="sound-enabled">
+                        <span>Ton bei Erfassung aktivieren</span>
+                    </label>
+                    <label class="setting-item">
+                        <input type="checkbox" id="flash-indicator" checked>
+                        <span>Visueller Indikator bei Erfassung</span>
+                    </label>
+                </div>
+                <div class="settings-info">
+                    <p>💡 <strong>Tipp:</strong> Smartphone an Netzteil anschließen und Display-Timeout in den Systemeinstellungen deaktivieren.</p>
+                </div>
+            </section>
+
+            <!-- Visualization Section -->
+            <section class="section">
+                <h2>Wasserverbrauch</h2>
+                <div class="chart-controls">
+                    <select id="chart-type">
+                        <option value="daily">Heute (Std.)</option>
+                        <option value="weekly">Woche (Tage)</option>
+                        <option value="hourly-week">Woche (Std./Tag)</option>
+                    </select>
+                </div>
+                <div class="chart-container">
+                    <canvas id="usage-chart"></canvas>
+                </div>
+            </section>
+
+            <!-- Readings History -->
+            <section class="section">
+                <h2>Zählerstandsverlauf</h2>
+                <div id="readings-list" class="readings-list"></div>
+            </section>
+        </main>
+
+        <!-- Navigation -->
+        <nav class="bottom-nav">
+            <button class="nav-btn active" data-section="auto">
+                🔄<br>Auto
+            </button>
+            <button class="nav-btn" data-section="chart">
+                📊<br>Analyse
+            </button>
+            <button class="nav-btn" data-section="history">
+                📋<br>Verlauf
+            </button>
+            <button class="nav-btn" data-section="settings">
+                ⚙️<br>Einstellungen
+            </button>
+        </nav>
+
+        <!-- Loading Overlay -->
+        <div id="loading-overlay" class="loading-overlay" style="display: none;">
+            <div class="loading-spinner"></div>
+            <p>Verarbeite Bild...</p>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5.0.2/dist/tesseract.min.js"></script>
+    <script src="app.js"></script>
+</body>
+</html>

@@ -1,0 +1,21 @@
+{
+  "name": "water-meter-tracker",
+  "version": "1.0.0",
+  "description": "Progressive Web App zum automatischen Ablesen von Wasserzählerständen",
+  "scripts": {
+    "generate-icons": "node generate-icons.js",
+    "start": "npx http-server -p 8080 -c-1"
+  },
+  "keywords": [
+    "pwa",
+    "water-meter",
+    "ocr",
+    "tracker"
+  ],
+  "author": "",
+  "license": "MIT",
+  "devDependencies": {
+    "sharp": "^0.33.0",
+    "http-server": "^14.1.1"
+  }
+}
