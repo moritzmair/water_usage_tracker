@@ -2,7 +2,21 @@
 const state = {
     cameraStream: null,
     db: null,
-    chart: null
+    chart: null,
+    autoCapture: {
+        active: false,
+        interval: null,
+        timer: null,
+        nextCaptureTime: null,
+        intervalMinutes: 60,
+        successCount: 0
+    },
+    wakeLock: null,
+    settings: {
+        keepScreenOn: true,
+        soundEnabled: false,
+        flashIndicator: true
+    }
 };
 
 // IndexedDB Setup
@@ -34,7 +48,7 @@ function initDB() {
 }
 
 // Save Reading to IndexedDB
-function saveReading(value) {
+function saveReading(value, isAuto = false) {
     return new Promise((resolve, reject) => {
         const transaction = state.db.transaction([STORE_NAME], 'readwrite');
         const objectStore = transaction.objectStore(STORE_NAME);
@@ -42,7 +56,8 @@ function saveReading(value) {
         const reading = {
             value: parseFloat(value),
             timestamp: Date.now(),
-            date: new Date().toISOString()
+            date: new Date().toISOString(),
+            auto: isAuto
         };
         
         const request = objectStore.add(reading);
@@ -75,6 +90,33 @@ function deleteReading(id) {
     });
 }
 
+// Wake Lock API - Keep Screen On
+async function requestWakeLock() {
+    if ('wakeLock' in navigator && state.settings.keepScreenOn) {
+        try {
+            state.wakeLock = await navigator.wakeLock.request('screen');
+            console.log('Wake Lock activated');
+            
+            state.wakeLock.addEventListener('release', () => {
+                console.log('Wake Lock released');
+            });
+            
+            return true;
+        } catch (err) {
+            console.error('Wake Lock error:', err);
+            return false;
+        }
+    }
+    return false;
+}
+
+async function releaseWakeLock() {
+    if (state.wakeLock) {
+        await state.wakeLock.release();
+        state.wakeLock = null;
+    }
+}
+
 // Camera Functions
 async function startCamera() {
     try {
@@ -90,12 +132,12 @@ async function startCamera() {
         const videoElement = document.getElementById('camera-preview');
         videoElement.srcObject = state.cameraStream;
         
-        document.getElementById('start-camera-btn').style.display = 'none';
-        document.getElementById('capture-btn').style.display = 'block';
-        document.getElementById('stop-camera-btn').style.display = 'block';
+        console.log('Camera started');
+        return true;
     } catch (error) {
         console.error('Camera error:', error);
         alert('Kamerazugriff fehlgeschlagen. Bitte Berechtigungen prüfen.');
+        return false;
     }
 }
 
@@ -106,52 +148,176 @@ function stopCamera() {
         
         const videoElement = document.getElementById('camera-preview');
         videoElement.srcObject = null;
-        
-        document.getElementById('start-camera-btn').style.display = 'block';
-        document.getElementById('capture-btn').style.display = 'none';
-        document.getElementById('stop-camera-btn').style.display = 'none';
     }
 }
 
-async function capturePhoto() {
-    const videoElement = document.getElementById('camera-preview');
-    const canvas = document.getElementById('camera-canvas');
-    const context = canvas.getContext('2d');
+// Auto-Capture Functions
+async function startAutoCapture() {
+    const intervalMinutes = parseInt(document.getElementById('capture-interval').value);
+    state.autoCapture.intervalMinutes = intervalMinutes;
     
-    canvas.width = videoElement.videoWidth;
-    canvas.height = videoElement.videoHeight;
-    context.drawImage(videoElement, 0, 0, canvas.width, canvas.height);
+    // Request wake lock
+    await requestWakeLock();
     
-    const imageData = canvas.toDataURL('image/png');
+    // Start camera
+    const cameraStarted = await startCamera();
+    if (!cameraStarted) {
+        return;
+    }
     
-    // Show loading overlay
-    document.getElementById('loading-overlay').style.display = 'flex';
+    // Update UI
+    state.autoCapture.active = true;
+    state.autoCapture.successCount = 0;
+    document.getElementById('start-auto-btn').style.display = 'none';
+    document.getElementById('stop-auto-btn').style.display = 'block';
+    document.getElementById('auto-status').textContent = 'Aktiv';
+    document.getElementById('auto-status').className = 'status-value status-active';
+    document.getElementById('capture-interval').disabled = true;
     
-    // Perform OCR
-    try {
-        const result = await performOCR(imageData);
-        document.getElementById('loading-overlay').style.display = 'none';
+    // Show recording indicator
+    if (state.settings.flashIndicator) {
+        document.getElementById('capture-indicator').classList.add('recording');
+    }
+    
+    // Show battery warning
+    checkBatteryStatus();
+    
+    // Start capture loop
+    scheduleNextCapture();
+    
+    console.log(`Auto-capture started with ${intervalMinutes} minute interval`);
+}
+
+function stopAutoCapture() {
+    state.autoCapture.active = false;
+    
+    // Clear timers
+    if (state.autoCapture.timer) {
+        clearTimeout(state.autoCapture.timer);
+        state.autoCapture.timer = null;
+    }
+    
+    // Release wake lock
+    releaseWakeLock();
+    
+    // Stop camera
+    stopCamera();
+    
+    // Update UI
+    document.getElementById('start-auto-btn').style.display = 'block';
+    document.getElementById('stop-auto-btn').style.display = 'none';
+    document.getElementById('auto-status').textContent = 'Inaktiv';
+    document.getElementById('auto-status').className = 'status-value status-inactive';
+    document.getElementById('next-capture').textContent = '---';
+    document.getElementById('capture-interval').disabled = false;
+    document.getElementById('capture-indicator').classList.remove('recording');
+    
+    console.log('Auto-capture stopped');
+}
+
+function scheduleNextCapture() {
+    if (!state.autoCapture.active) return;
+    
+    const intervalMs = state.autoCapture.intervalMinutes * 60 * 1000;
+    state.autoCapture.nextCaptureTime = Date.now() + intervalMs;
+    
+    updateNextCaptureDisplay();
+    
+    state.autoCapture.timer = setTimeout(async () => {
+        await performAutoCapture();
+        scheduleNextCapture();
+    }, intervalMs);
+}
+
+function updateNextCaptureDisplay() {
+    if (!state.autoCapture.active) return;
+    
+    const update = () => {
+        if (!state.autoCapture.active) return;
         
-        // Extract numbers from OCR result
-        const numbers = extractMeterReading(result);
+        const now = Date.now();
+        const remaining = state.autoCapture.nextCaptureTime - now;
         
-        if (numbers) {
-            document.getElementById('meter-reading').value = numbers;
-            document.getElementById('ocr-result').style.display = 'block';
+        if (remaining <= 0) {
+            document.getElementById('next-capture').textContent = 'Läuft...';
         } else {
-            alert('Kein Zählerstand erkannt. Bitte manuell eingeben.');
+            const minutes = Math.floor(remaining / 60000);
+            const seconds = Math.floor((remaining % 60000) / 1000);
+            document.getElementById('next-capture').textContent = 
+                `${minutes}:${seconds.toString().padStart(2, '0')} min`;
+        }
+        
+        if (state.autoCapture.active) {
+            setTimeout(update, 1000);
+        }
+    };
+    
+    update();
+}
+
+async function performAutoCapture() {
+    if (!state.autoCapture.active) return;
+    
+    console.log('Performing auto-capture...');
+    
+    // Visual indicator
+    if (state.settings.flashIndicator) {
+        const indicator = document.getElementById('capture-indicator');
+        indicator.classList.add('capturing');
+        setTimeout(() => indicator.classList.remove('capturing'), 500);
+    }
+    
+    // Sound indicator
+    if (state.settings.soundEnabled) {
+        playBeep();
+    }
+    
+    try {
+        // Capture image
+        const videoElement = document.getElementById('camera-preview');
+        const canvas = document.getElementById('camera-canvas');
+        const context = canvas.getContext('2d');
+        
+        canvas.width = videoElement.videoWidth;
+        canvas.height = videoElement.videoHeight;
+        context.drawImage(videoElement, 0, 0, canvas.width, canvas.height);
+        
+        const imageData = canvas.toDataURL('image/png');
+        
+        // Perform OCR
+        const result = await performOCR(imageData);
+        const reading = extractMeterReading(result);
+        
+        if (reading && parseFloat(reading) > 0) {
+            // Save reading
+            await saveReading(reading, true);
+            state.autoCapture.successCount++;
+            
+            // Update UI
+            document.getElementById('last-reading').textContent = `${parseFloat(reading).toFixed(3)} m³`;
+            document.getElementById('success-count').textContent = state.autoCapture.successCount;
+            
+            // Refresh displays
+            await updateReadingsList();
+            await updateChart();
+            
+            console.log(`Auto-capture successful: ${reading} m³`);
+        } else {
+            console.warn('Auto-capture: No valid reading detected');
         }
     } catch (error) {
-        document.getElementById('loading-overlay').style.display = 'none';
-        console.error('OCR error:', error);
-        alert('OCR fehlgeschlagen. Bitte manuell eingeben.');
+        console.error('Auto-capture error:', error);
     }
 }
 
 // OCR Function
 async function performOCR(imageData) {
     const worker = await Tesseract.createWorker('deu', 1, {
-        logger: m => console.log(m)
+        logger: m => {
+            if (m.status === 'recognizing text') {
+                console.log(`OCR Progress: ${Math.round(m.progress * 100)}%`);
+            }
+        }
     });
     
     const { data: { text } } = await worker.recognize(imageData);
@@ -174,11 +340,61 @@ function extractMeterReading(text) {
             // Get the largest number found
             const numbers = matches.map(m => parseFloat(m.replace(',', '.')));
             const maxNumber = Math.max(...numbers);
-            return maxNumber.toFixed(3);
+            
+            // Validate: water meter readings are typically < 100000
+            if (maxNumber > 0 && maxNumber < 100000) {
+                return maxNumber.toFixed(3);
+            }
         }
     }
     
     return null;
+}
+
+// Battery Status
+async function checkBatteryStatus() {
+    if ('getBattery' in navigator) {
+        try {
+            const battery = await navigator.getBattery();
+            const warningBox = document.getElementById('battery-warning');
+            
+            const updateBatteryWarning = () => {
+                if (!battery.charging && battery.level < 0.8) {
+                    warningBox.style.display = 'block';
+                } else if (!battery.charging) {
+                    warningBox.style.display = 'block';
+                    warningBox.textContent = '⚡ Bitte Smartphone an Netzteil anschließen!';
+                } else {
+                    warningBox.style.display = 'none';
+                }
+            };
+            
+            updateBatteryWarning();
+            battery.addEventListener('chargingchange', updateBatteryWarning);
+            battery.addEventListener('levelchange', updateBatteryWarning);
+        } catch (error) {
+            console.warn('Battery API not available:', error);
+        }
+    }
+}
+
+// Sound Beep
+function playBeep() {
+    const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+    const oscillator = audioContext.createOscillator();
+    const gainNode = audioContext.createGain();
+    
+    oscillator.connect(gainNode);
+    gainNode.connect(audioContext.destination);
+    
+    oscillator.frequency.value = 800;
+    oscillator.type = 'sine';
+    
+    gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
+    gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.1);
+    
+    oscillator.start(audioContext.currentTime);
+    oscillator.stop(audioContext.currentTime + 0.1);
 }
 
 // Save Reading Handler
@@ -189,13 +405,11 @@ async function handleSaveReading(value) {
     }
     
     try {
-        await saveReading(value);
+        await saveReading(value, false);
         alert('Zählerstand gespeichert!');
         
         // Reset UI
-        document.getElementById('meter-reading').value = '';
-        document.getElementById('ocr-result').style.display = 'none';
-        stopCamera();
+        document.getElementById('manual-reading').value = '';
         
         // Refresh displays
         await updateReadingsList();
@@ -240,11 +454,13 @@ async function updateReadingsList() {
             }
         }
         
+        const autoIndicator = reading.auto ? ' 🔄' : '';
+        
         const item = document.createElement('div');
         item.className = 'reading-item';
         item.innerHTML = `
             <div class="reading-info">
-                <div class="reading-value">${reading.value.toFixed(3)} m³</div>
+                <div class="reading-value">${reading.value.toFixed(3)} m³${autoIndicator}</div>
                 <div class="reading-time">${formattedDate}</div>
                 ${usageText ? `<div class="reading-usage">${usageText}</div>` : ''}
             </div>
@@ -390,18 +606,10 @@ function calculateHourlyByDayOfWeek(readings) {
         }
     }
     
-    // Find peak usage day and hour
-    let maxUsage = 0;
-    let maxDay = 0;
-    
-    const dailyTotals = weeklyData.map((hours, dayIndex) => {
-        const total = hours.reduce((sum, h) => sum + h, 0);
-        if (total > maxUsage) {
-            maxUsage = total;
-            maxDay = dayIndex;
-        }
-        return total;
-    });
+    // Calculate daily totals
+    const dailyTotals = weeklyData.map(hours => 
+        hours.reduce((sum, h) => sum + h, 0)
+    );
     
     return {
         labels: dayNames,
@@ -464,15 +672,40 @@ function setupNavigation() {
             btn.classList.add('active');
             
             // Scroll to appropriate section
-            if (targetSection === 'camera') {
-                sections[0].scrollIntoView({ behavior: 'smooth' });
+            let sectionIndex = 0;
+            if (targetSection === 'auto') {
+                sectionIndex = 0;
             } else if (targetSection === 'chart') {
-                sections[2].scrollIntoView({ behavior: 'smooth' });
+                sectionIndex = 2;
             } else if (targetSection === 'history') {
-                sections[3].scrollIntoView({ behavior: 'smooth' });
+                sectionIndex = 3;
+            } else if (targetSection === 'settings') {
+                sectionIndex = 1;
             }
+            
+            sections[sectionIndex].scrollIntoView({ behavior: 'smooth' });
         });
     });
+}
+
+// Settings
+function loadSettings() {
+    const saved = localStorage.getItem('waterMeterSettings');
+    if (saved) {
+        state.settings = JSON.parse(saved);
+    }
+    
+    document.getElementById('keep-screen-on').checked = state.settings.keepScreenOn;
+    document.getElementById('sound-enabled').checked = state.settings.soundEnabled;
+    document.getElementById('flash-indicator').checked = state.settings.flashIndicator;
+}
+
+function saveSettings() {
+    state.settings.keepScreenOn = document.getElementById('keep-screen-on').checked;
+    state.settings.soundEnabled = document.getElementById('sound-enabled').checked;
+    state.settings.flashIndicator = document.getElementById('flash-indicator').checked;
+    
+    localStorage.setItem('waterMeterSettings', JSON.stringify(state.settings));
 }
 
 // Service Worker Registration
@@ -487,27 +720,36 @@ async function registerServiceWorker() {
     }
 }
 
+// Prevent screen sleep on visibility change
+document.addEventListener('visibilitychange', async () => {
+    if (!document.hidden && state.autoCapture.active && state.settings.keepScreenOn) {
+        await requestWakeLock();
+    }
+});
+
 // Initialize App
 async function initApp() {
     try {
         await initDB();
         await registerServiceWorker();
+        loadSettings();
         
-        // Event Listeners
-        document.getElementById('start-camera-btn').addEventListener('click', startCamera);
-        document.getElementById('stop-camera-btn').addEventListener('click', stopCamera);
-        document.getElementById('capture-btn').addEventListener('click', capturePhoto);
+        // Event Listeners - Auto-Capture
+        document.getElementById('start-auto-btn').addEventListener('click', startAutoCapture);
+        document.getElementById('stop-auto-btn').addEventListener('click', stopAutoCapture);
         
-        document.getElementById('save-reading-btn').addEventListener('click', () => {
-            const value = document.getElementById('meter-reading').value;
-            handleSaveReading(value);
-        });
-        
+        // Event Listeners - Manual Entry
         document.getElementById('save-manual-btn').addEventListener('click', () => {
             const value = document.getElementById('manual-reading').value;
             handleSaveReading(value);
         });
         
+        // Event Listeners - Settings
+        document.getElementById('keep-screen-on').addEventListener('change', saveSettings);
+        document.getElementById('sound-enabled').addEventListener('change', saveSettings);
+        document.getElementById('flash-indicator').addEventListener('change', saveSettings);
+        
+        // Event Listeners - Chart
         document.getElementById('chart-type').addEventListener('change', updateChart);
         
         setupNavigation();

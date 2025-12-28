@@ -1,84 +1,204 @@
-# 🚀 Wasserzähler Tracker - Schnellstart
+# 🚀 Wasserzähler Tracker - Schnellstart für Auto-Modus
 
-## Sofort starten (empfohlen)
+## Sofortige Inbetriebnahme
 
-Die App benötigt einen lokalen Webserver. Hier sind die einfachsten Optionen:
+Die App ist für 1-2 Monate Dauerbetrieb über dem Wasserzähler konzipiert.
 
-### Option 1: Python (meist vorinstalliert)
+### 1️⃣ Server starten
+
+Wähle eine Option:
+
 ```bash
+# Python (einfachste Option)
 python3 -m http.server 8080
-```
 
-### Option 2: PHP (meist vorinstalliert auf Mac)
-```bash
+# PHP
 php -S localhost:8080
+
+# Node.js
+npm install && npm start
 ```
 
-### Option 3: Mit Node.js
-```bash
-npm install
-npm start
-```
+### 2️⃣ HTTPS aktivieren (für Kamera erforderlich)
 
-## App öffnen
+**Mit ngrok (empfohlen):**
 
-Nach dem Start eines Servers:
-
-1. Browser öffnen: **http://localhost:8080**
-2. Für Kamera-Zugriff ist HTTPS erforderlich
-
-## HTTPS für Kamera-Zugriff
-
-Die Kamera funktioniert nur über HTTPS. Optionen:
-
-### A) Localhost-Ausnahme (Chrome/Edge)
-- `chrome://flags/#unsafely-treat-insecure-origin-as-secure`
-- Hinzufügen: `http://localhost:8080`
-- Chrome neu starten
-
-### B) ngrok (einfachste HTTPS-Lösung)
 ```bash
 # ngrok installieren: https://ngrok.com/download
+# Dann ausführen:
 ngrok http 8080
+
+# Ausgabe z.B.: https://abc123.ngrok.io
+# Diese URL verwenden!
 ```
-Dann die HTTPS-URL von ngrok verwenden.
 
-## Auf dem Smartphone testen
+**Ohne ngrok (nur für lokale Tests):**
+- Chrome: `chrome://flags/#unsafely-treat-insecure-origin-as-secure`
+- Hinzufügen: `http://localhost:8080`
 
-### Option 1: Mit ngrok (empfohlen)
-1. `ngrok http 8080` starten
-2. Die generierte HTTPS-URL (z.B. `https://abc123.ngrok.io`) auf dem Smartphone öffnen
-3. App installieren über Browser-Menü "Zum Homescreen hinzufügen"
+### 3️⃣ Smartphone einrichten
 
-### Option 2: Im gleichen Netzwerk
-1. Lokalen Server starten
-2. Deine lokale IP-Adresse finden: `ifconfig | grep inet`
-3. Auf Smartphone: `http://DEINE-IP:8080`
-4. Kamera funktioniert nur mit HTTPS (siehe ngrok)
+#### App installieren:
+1. HTTPS-URL im Browser öffnen
+2. **iOS**: Teilen-Symbol → "Zum Home-Bildschirm"
+3. **Android**: Menü → "App installieren"
 
-## Funktionen testen
+#### System-Einstellungen (WICHTIG!):
 
-1. **Kamera**: "Kamera starten" → Foto vom Wasserzähler machen
-2. **OCR**: Automatische Erkennung der Ziffern
-3. **Speichern**: Zählerstand wird lokal gespeichert
-4. **Analyse**: Charts zeigen Verbrauchsmuster
-5. **Offline**: Service Worker macht App offline-fähig
+**iOS:**
+```
+⚙️ Einstellungen → Anzeige & Helligkeit
+   → Automatische Sperre: "Nie"
 
-## Troubleshooting
+⚙️ Einstellungen → Batterie
+   → Stromsparmodus: AUS
+```
 
-**Kamera funktioniert nicht:**
-- HTTPS erforderlich (nutze ngrok)
-- Kamera-Berechtigung im Browser erlauben
+**Android:**
+```
+⚙️ Einstellungen → Display
+   → Bildschirm-Timeout: "30 Minuten"
 
-**OCR erkennt nichts:**
-- Bessere Beleuchtung
-- Nahaufnahme der Ziffern
-- Manuelle Eingabe nutzen
+⚙️ Entwickleroptionen
+   → Stay awake when charging: EIN
+   
+⚙️ Einstellungen → Apps → WZ Tracker
+   → Akku → Nicht optimieren
+```
 
-**App lädt nicht:**
-- Service Worker Cache löschen: DevTools → Application → Clear Storage
-- Hard Reload: Strg/Cmd + Shift + R
+### 4️⃣ Smartphone montieren
 
-## Deployment
+**Positionierung:**
+- 📏 Abstand: 15-25 cm vom Zähler
+- 📐 Ausrichtung: Kamera direkt auf Ziffern
+- 💡 Licht: Gleichmäßig, keine Schatten
+- 🔌 Netzteil: Dauerhaft angeschlossen!
 
-Für produktiven Einsatz siehe [README.md](README.md) - Empfehlung: GitHub Pages oder Netlify.
+**Halterung:**
+- Flexibler Smartphone-Halter (z.B. Schwanenhals)
+- Feste Montage (Saugnapf/Klebepad)
+- Zugang zum Ladeanschluss
+
+### 5️⃣ Auto-Modus starten
+
+1. ✅ App öffnen
+2. ✅ Erfassungsintervall wählen (empfohlen: **1 Stunde**)
+3. ✅ **"Automatik starten"** drücken
+4. ✅ Kamera-Berechtigung erteilen
+5. ✅ Smartphone ans Netzteil anschließen
+6. ✅ App im Vordergrund lassen
+
+**Fertig!** Die App läuft nun vollautomatisch.
+
+## Erfassungsintervalle
+
+- ⚡ **5 Min**: Nur zum Testen
+- 🔄 **15 Min**: Sehr detailliert
+- ⭐ **1 Stunde**: **EMPFOHLEN** - Beste Balance
+- 🔋 **2-6 Stunden**: Batterieschonend
+
+## Status-Anzeige
+
+Während des Betriebs zeigt die App:
+- ✅ Status: Aktiv/Inaktiv
+- 📊 Letzter Zählerstand
+- ⏱️ Countdown bis nächster Erfassung
+- ✔️ Anzahl erfolgreicher Erfassungen
+
+## Datenauswertung (nach 1-2 Monaten)
+
+1. 📊 **Tab "Analyse"** öffnen
+2. Ansicht wählen:
+   - **Heute (Std.)**: Stündlicher Verbrauch heute
+   - **Woche (Tage)**: Verbrauch letzte 7 Tage
+   - **Woche (Std./Tag)**: Durchschnitt pro Wochentag ⭐
+
+3. 🔍 Verbrauchsmuster analysieren:
+   - Wann wird am meisten Wasser benötigt?
+   - Wann sind Schwachzeiten?
+
+4. 🔧 Zirkulationspumpe programmieren:
+   - Nur zu Bedarfszeiten laufen lassen
+   - Nachtabschaltung nutzen
+   - Bis zu **70% Energie** sparen!
+
+## Häufige Probleme
+
+### ❌ Kamera startet nicht
+```
+✓ HTTPS verwenden (ngrok)
+✓ Berechtigung erteilt?
+✓ Andere Apps schließen
+```
+
+### ❌ OCR erkennt nichts
+```
+✓ Beleuchtung verbessern
+✓ Abstand prüfen (15-25 cm)
+✓ Zähler reinigen
+✓ Kamera ausrichten
+```
+
+### ❌ Display schaltet aus
+```
+✓ Wake Lock in App-Einstellungen
+✓ System-Display-Timeout: "Nie"
+✓ App im Vordergrund
+✓ "Stay awake" aktiviert (Android)
+```
+
+### ❌ Batterie leer
+```
+⚠️  NETZTEIL ANSCHLIESSEN!
+✓ Akku-Optimierung aus
+✓ Display-Helligkeit senken
+```
+
+### ❌ App stoppt nach Stunden
+```
+✓ Akku-Optimierung deaktivieren
+✓ Geführter Zugriff (iOS)
+✓ App nicht aus Tasklist entfernen
+```
+
+## Checkliste vor Start
+
+```
+☐ Server läuft (mit HTTPS via ngrok)
+☐ App auf Smartphone installiert
+☐ Display-Timeout auf "Nie" oder "30 Min+"
+☐ Akku-Optimierung für App deaktiviert
+☐ Smartphone montiert (15-25 cm Abstand)
+☐ Gute Beleuchtung des Zählers
+☐ Netzteil angeschlossen
+☐ Wake Lock in App aktiviert
+☐ Erfassungsintervall gewählt
+☐ "Automatik starten" gedrückt
+☐ Kamera zeigt Zähler an
+```
+
+## Tipps für beste Ergebnisse
+
+💡 **Beleuchtung**: LED-Streifen für gleichmäßiges Licht  
+💡 **Stabilität**: Feste Halterung ohne Wackeln  
+💡 **Batterie**: Powerbank als Backup bei Stromausfall  
+💡 **Test**: Erst 24h testen, dann für 1-2 Monate laufen lassen  
+💡 **Backup**: Screenshots der Konfiguration machen  
+💡 **Export**: Regelmäßig Daten sichern (Browser-Export)
+
+## Nächste Schritte
+
+1. ✅ **Woche 1**: System stabilisiert, erste Daten sammeln
+2. ✅ **Woche 2-4**: Verbrauchsmuster werden sichtbar
+3. ✅ **Woche 5-8**: Präzise Analyse der Spitzenzeiten
+4. ✅ **Nach 8 Wochen**: Zirkulationspumpe optimal programmieren
+
+## Support & Dokumentation
+
+- 📖 Vollständige Doku: [README.md](README.md)
+- 🔧 Technische Details: Alle Dateien sind Open Source
+- 🐛 Probleme? Browser Console (F12) → Fehlermeldungen prüfen
+
+---
+
+**Viel Erfolg beim Energie sparen! 💧⚡**
